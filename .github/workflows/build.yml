@@ -1,0 +1,36 @@
+name: Build CENTRIX
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --target CENTRIX_VST3 --parallel
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: CENTRIX-VST3-${{ matrix.os }}
+          path: build/CENTRIX_artefacts/Release/VST3/
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer\CENTRIX.iss
+      - name: Upload installer
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: CENTRIX-Installer
+          path: installer/Output/CENTRIX_Setup.exe
